@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/components/AuthProvider";
@@ -23,6 +24,8 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const goatcounterCode = process.env.NEXT_PUBLIC_GOATCOUNTER_CODE;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
@@ -42,6 +45,16 @@ export default function RootLayout({
             <Footer />
           </AuthProvider>
         </ThemeProvider>
+
+        {/* Lightweight, cookie-less aggregate traffic analytics */}
+        {goatcounterCode && (
+          <Script
+            data-goatcounter={`https://${goatcounterCode}.goatcounter.com/count`}
+            async
+            src="//gc.zgo.at/count.js"
+            strategy="afterInteractive"
+          />
+        )}
       </body>
     </html>
   );
