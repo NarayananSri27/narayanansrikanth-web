@@ -3,80 +3,428 @@
 @tailwind utilities;
 
 :root {
-  --bg-color: #faf9f6;
-  --surface-color: #ffffff;
-  --border-color: #e5e4df;
-  --text-primary: #121212;
-  --text-secondary: #6e6e73;
-  --text-tertiary: #9e9ea7;
-  --accent: #1e1e20;
+  --overlay-color: rgba(156, 128, 67, 0.3);
+  --bg-color: rgb(248, 247, 244);
+  --text-color: #32241a;
+  --link-color: #48290c;
+  --nav-link: #352619;
+  --hr-color: #e1e1e1;
+  --footer-border: rgb(70, 24, 7);
 }
 
-.dark {
-  --bg-color: #0d0d0e;
-  --surface-color: #151517;
-  --border-color: #242428;
-  --text-primary: #f2f2f3;
-  --text-secondary: #9a9a9f;
-  --text-tertiary: #606066;
-  --accent: #ededed;
+.dark,
+body.dark-mode {
+  --overlay-color: rgb(16 29 42 / 15%);
+  --bg-color: #11191f;
+  --text-color: #d3d3d3;
+  --link-color: #d3d3d3;
+  --nav-link: #c7c4c4;
+  --hr-color: #37383c;
+  --footer-border: rgb(55 122 137 / 30%);
 }
 
 body {
+  max-width: 1200px;
+  margin: auto;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
   background-color: var(--bg-color);
-  color: var(--text-primary);
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  color: var(--text-color);
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-::selection {
-  background-color: #222226;
-  color: #faf9f6;
+.content {
+  min-height: 80vh;
 }
 
-.dark ::selection {
-  background-color: #e2e2e5;
-  color: #121214;
+hr {
+  max-width: 800px;
+  margin: 0 auto;
+  border: none;
+  border-top: 0.5px solid var(--hr-color);
 }
 
-/* Minimal subtle link underline */
-.subtle-link {
+/* Headings */
+h1 {
+  font-size: 42px;
+  font-weight: 100;
+  line-height: 1.2;
+}
+
+h2 {
+  font-size: 36px;
+  font-weight: 100;
+  line-height: 1.25;
+}
+
+h3 {
+  font-size: 28px;
+  font-weight: 100;
+  line-height: 1.3;
+}
+
+h4 {
+  font-size: 24px;
+  font-weight: 100;
+}
+
+h5 {
+  font-size: 20px;
+  font-weight: 200;
+}
+
+h6 {
+  font-size: 18px;
+  font-weight: 200;
+}
+
+p,
+li {
+  font-weight: 200;
+  font-size: 18px;
+  line-height: 1.5em;
+  color: var(--text-color);
+}
+
+p strong,
+p b,
+li strong,
+li b {
+  font-weight: 400;
+}
+
+/* Navigation matching yakkomajuri.com */
+nav {
   position: relative;
-  text-decoration: none;
-  transition: color 0.15s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
 }
 
-.subtle-link::after {
+#site-title {
+  text-decoration: none;
+  color: inherit;
+  font-weight: 400;
+  font-size: 18px;
+}
+
+#navbar {
+  list-style-type: none;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  padding: 0;
+  margin: 0;
+}
+
+.nav-item,
+footer a {
+  cursor: pointer;
+  font-weight: 150;
+  color: var(--nav-link);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.nav-item:hover,
+.nav-item.selected,
+footer a:hover {
+  font-weight: 250;
+}
+
+.dark .nav-item.selected,
+.dark .nav-item:hover,
+body.dark-mode .nav-item.selected,
+body.dark-mode .nav-item:hover {
+  color: rgb(0 204 204);
+}
+
+nav > div:first-child {
+  position: absolute;
+  left: 20px;
+}
+
+.toggle-wrapper {
+  width: 50px;
+  height: 20px;
+  background: #e6dfd9;
+  border-radius: 30px;
+  position: absolute;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  padding: 0 2px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.dark .toggle-wrapper,
+body.dark-mode .toggle-wrapper {
+  background: #666;
+}
+
+.toggle-button {
+  font-size: 11px;
+  border: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: #fffbf5;
+  transition: transform 0.3s ease, background-color 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.dark .toggle-button,
+body.dark-mode .toggle-button {
+  transform: translateX(28px);
+  background-color: #000;
+  color: #fff;
+}
+
+/* Home Content 2-Column Layout */
+.home-content {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  flex-direction: row;
+  margin-top: 20px;
+}
+
+.home-content .image-container {
+  flex: 1;
+  text-align: center;
+  position: relative;
+  margin-top: 35px;
+}
+
+.home-content .image-container .image-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.home-content .image-container .image-wrapper::after {
   content: "";
   position: absolute;
-  width: 100%;
-  transform: scaleX(0);
-  height: 1px;
-  bottom: -1px;
+  top: 0;
+  right: 0;
+  bottom: 0;
   left: 0;
-  background-color: currentColor;
-  transform-origin: bottom right;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  background-color: var(--overlay-color);
+  pointer-events: none;
 }
 
-.subtle-link:hover::after {
-  transform: scaleX(1);
-  transform-origin: bottom left;
+.home-content .image-container img {
+  height: 700px;
+  width: auto;
+  max-width: 460px;
+  object-fit: cover;
+  display: block;
 }
 
-/* Subtle border transitions */
-.bordered-card {
-  border: 1px solid var(--border-color);
-  background-color: var(--surface-color);
-  transition: border-color 0.2s ease, transform 0.2s ease;
+.home-content .text-container {
+  flex: 1;
+  text-align: left;
+  margin-bottom: 50px;
+  padding: 0 20px;
 }
 
-.bordered-card:hover {
-  border-color: #b0b0b8;
+.text-container a,
+.home-content a {
+  text-decoration: none;
+  color: var(--link-color);
+  font-weight: 400;
+  border-bottom: 1px dotted #48290c;
+  transition: opacity 0.2s ease;
 }
 
-.dark .bordered-card:hover {
-  border-color: #44444c;
+.dark .text-container a,
+.dark .home-content a,
+body.dark-mode .text-container a,
+body.dark-mode .home-content a {
+  color: #d3d3d3;
+  border-bottom: 0.5px dashed rgb(244, 249, 249);
+}
+
+.text-container a:hover,
+.home-content a:hover {
+  opacity: 0.7;
+}
+
+/* Footer matching yakkomajuri.com */
+footer {
+  margin-top: 50px;
+  padding: 20px 0;
+  position: relative;
+  bottom: 0;
+  width: 100%;
+  border-top: 0.5px solid var(--footer-border);
+}
+
+.footer-content {
+  max-width: 1000px;
+  margin: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+}
+
+.footer-content p {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 200;
+}
+
+.footer-content ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 20px;
+}
+
+/* Links & Contact matching yakkomajuri.com */
+.subtitle {
+  opacity: 0.5;
+  text-align: center;
+  display: block;
+  font-size: 14px;
+  margin-top: -10px;
+  margin-bottom: 30px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.link {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.link a {
+  border-bottom: 0.5px dashed rgb(91, 91, 91);
+  text-decoration: none;
+  color: inherit;
+  font-weight: 100;
+  text-align: center;
+  font-size: 24px;
+  transition: opacity 0.2s ease;
+}
+
+.dark .link a,
+body.dark-mode .link a {
+  border-bottom: 0.5px dashed rgb(200, 200, 200);
+}
+
+.link a:hover {
+  opacity: 0.7;
+}
+
+.contact {
+  text-align: center;
+  margin: auto;
+}
+
+.contact p {
+  color: inherit;
+  font-weight: 100;
+  text-align: center;
+  font-size: 20px;
+}
+
+.contact code {
+  font-family: inherit;
+  background: transparent;
+  padding: 0;
+}
+
+/* Photos Album Grid matching yakkomajuri.com/albums */
+.album-grid {
+  column-count: 3;
+  column-gap: 40px;
+  margin: auto;
+  margin-bottom: 50px;
+  width: 90%;
+}
+
+.album {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+  margin-bottom: 40px;
+  break-inside: avoid;
+  cursor: pointer;
+}
+
+.album::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background-color: var(--overlay-color);
+  z-index: 1;
+}
+
+.album img {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  display: block;
+}
+
+.album-title {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  margin: 0;
+  color: white;
+  font-weight: 150;
+  font-size: 18px;
+  z-index: 2;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+/* Mobile Media Queries */
+@media (max-width: 1000px) {
+  .home-content {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .home-content .image-container img {
+    height: 400px !important;
+    margin: auto;
+    display: block;
+  }
+
+  .text-container {
+    margin-left: 10px;
+    margin-right: 10px;
+    margin-top: 30px;
+  }
+
+  .text-container p,
+  .text-container li {
+    font-weight: 300;
+  }
+
+  .image-container {
+    margin: auto;
+  }
+
+  .album-grid {
+    column-count: 1;
+    width: 95%;
+  }
+
+  h1 {
+    font-size: 36px;
+  }
 }
