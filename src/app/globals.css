@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-color: #faf9f6;
+  --surface-color: #ffffff;
+  --border-color: #e5e4df;
+  --text-primary: #121212;
+  --text-secondary: #6e6e73;
+  --text-tertiary: #9e9ea7;
+  --accent: #1e1e20;
+}
+
+.dark {
+  --bg-color: #0d0d0e;
+  --surface-color: #151517;
+  --border-color: #242428;
+  --text-primary: #f2f2f3;
+  --text-secondary: #9a9a9f;
+  --text-tertiary: #606066;
+  --accent: #ededed;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+::selection {
+  background-color: #222226;
+  color: #faf9f6;
+}
+
+.dark ::selection {
+  background-color: #e2e2e5;
+  color: #121214;
+}
+
+/* Minimal subtle link underline */
+.subtle-link {
+  position: relative;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.subtle-link::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  transform: scaleX(0);
+  height: 1px;
+  bottom: -1px;
+  left: 0;
+  background-color: currentColor;
+  transform-origin: bottom right;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.subtle-link:hover::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
+}
+
+/* Subtle border transitions */
+.bordered-card {
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-color);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.bordered-card:hover {
+  border-color: #b0b0b8;
+}
+
+.dark .bordered-card:hover {
+  border-color: #44444c;
+}

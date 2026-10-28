@@ -1,0 +1,7 @@
+<svg width="400" height="400" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="400" fill="#242428"/>
+  <circle cx="200" cy="150" r="55" fill="#38383e"/>
+  <path d="M100 320 C100 245, 140 220, 200 220 C260 220, 300 245, 300 320" fill="#38383e"/>
+  <text x="200" y="365" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" fill="#8e8e93" text-anchor="middle" letter-spacing="0.05em">NARAYANAN SRIKANTH</text>
+  <rect x="19.5" y="19.5" width="361" height="361" stroke="#333338" stroke-width="1" stroke-dasharray="4 4"/>
+</svg>
