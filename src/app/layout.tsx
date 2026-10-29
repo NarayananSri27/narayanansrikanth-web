@@ -30,7 +30,6 @@ export default function RootLayout({
           attribute="class"
           defaultTheme="system"
           enableSystem
-          disableTransitionOnChange
         >
           <AuthProvider>
             <ActivityTracker />
@@ -46,3 +45,4 @@ export default function RootLayout({
     </html>
   );
 }
+

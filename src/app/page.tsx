@@ -1,5 +1,4 @@
-import Link from "next/link";
-import Image from "next/image";
+﻿import Link from "next/link";
 
 export default function HomePage() {
   return (
@@ -7,7 +6,7 @@ export default function HomePage() {
       <div className="image-container">
         <div className="image-wrapper">
           <img
-            src="/img/main.webp"
+            src="/img/Narayanan_F1.jpeg"
             alt="Narayanan Srikanth"
             style={{ height: "700px", display: "block" }}
           />
@@ -15,58 +14,29 @@ export default function HomePage() {
       </div>
       <div className="text-container">
         <h1>hey there</h1>
+
         <p>
-          I&apos;m Narayanan, an engineering student at{" "}
-          <a
-            href="https://www.mcgill.ca/engineering/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            McGill University
-          </a>
-          .
+          I&apos;m Narayanan, an engineering student at McGill University.
         </p>
         <p>
-          I like building things: software systems, quantitative finance tools, risk models, and aerospace simulations.
+          I like building things; software systems, quantitative finance tools, risk analysis models, and aerospace/defence simulations.
         </p>
         <p>
-          Outside of engineering, I spend my time watching cinema, analyzing music, writing, and practicing photography.
+          Outside of engineering, I&apos;m a retired Warrant Officer from the Royal Canadian Air Cadets who still flies. I enjoy films, music, cooking, and travelling.
         </p>
         <p>
-          You can explore my <Link href="/photos">pics</Link> (film scans &amp; campus moments) or check out my private{" "}
-          <Link href="/research">research notebook</Link>.
+          Check out my pics for cool people, places, cultures, and random moments or snoop around my private research notebook.
         </p>
         <p>
-          Selected ongoing projects include an{" "}
-          <a
-            href="https://github.com/placeholder-narayanan/telemetry-sim"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            embedded guidance simulator
-          </a>
-          , a{" "}
-          <a
-            href="https://github.com/placeholder-narayanan/risk-research"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            quantitative risk research notebook
-          </a>
-          , and an{" "}
-          <a
-            href="https://github.com/placeholder-narayanan/audio-enhancer"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            audio signal analysis tool
-          </a>
-          .
+          Currently working on a Commodity Portfolio Risk Analyser &amp; an Aircraft Stress Tracker.
         </p>
         <p>
-          If you wanna have a chat, <Link href="/contact">contact me.</Link>
+          If you wanna have a chat, <Link href="/contact">contact me</Link>.
         </p>
       </div>
     </div>
   );
 }
+
+
+

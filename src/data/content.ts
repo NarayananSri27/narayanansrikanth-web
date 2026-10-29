@@ -1,4 +1,4 @@
-export interface Project {
+﻿export interface Project {
   title: string;
   description: string;
   year: string;
@@ -173,36 +173,38 @@ export const siteContent: SiteContent = {
     {
       title: "GitHub",
       subtitle: "Code, open-source repositories, and experiments",
-      url: "https://github.com/your-username",
+      url: "https://github.com/NarayananSri27",
       icon: "github",
       category: "code",
     },
     {
       title: "LinkedIn",
       subtitle: "Professional background and academic updates",
-      url: "https://linkedin.com/in/your-profile",
+      url: "https://www.linkedin.com/in/narayanan-srikanth/",
       icon: "linkedin",
       category: "primary",
     },
     {
       title: "Email",
       subtitle: "Direct correspondence for research or collaboration",
-      url: "mailto:narayanan.srikanth@example.com",
+      url: "mailto:narayanansri2007@gmail.com",
       icon: "mail",
       category: "primary",
     },
     {
-      title: "McGill Engineering",
-      subtitle: "Academic institution and faculty department",
-      url: "https://www.mcgill.ca/engineering/",
+      title: "Letterboxd",
+      subtitle: "Films I have watched and reviewed",
+      url: "https://letterboxd.com/narayanansri27/",
       icon: "external-link",
-      category: "primary",
+      category: "social",
     },
   ],
 
   contact: {
-    email: "narayanan.srikanth@example.com",
+    email: "narayanansri2007@gmail.com",
     note: "I welcome thoughtful emails regarding engineering projects, research collaborations, book recommendations, or cinema.",
     responseTime: "Usually responds within 2-3 business days.",
   },
 };
+
+

@@ -1,4 +1,4 @@
-import { siteContent } from "@/data/content";
+﻿import { siteContent } from "@/data/content";
 
 export const metadata = {
   title: "Contact — Narayanan Srikanth",
@@ -29,7 +29,7 @@ export default function ContactPage() {
 
       <div className="contact">
         <p>
-          <code>{formattedEmail}</code>
+          <a href="mailto:narayanansri2007@gmail.com">narayanansri2007@gmail.com</a>
         </p>
         <p style={{ fontSize: "15px", opacity: 0.65, marginTop: "20px" }}>
           {contact.note}
@@ -38,3 +38,4 @@ export default function ContactPage() {
     </div>
   );
 }
+
