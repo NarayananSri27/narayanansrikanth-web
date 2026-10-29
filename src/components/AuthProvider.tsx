@@ -120,6 +120,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const isOwnerAccount = userEmail === ownerEmail;
 
       if (data && !error) {
+        const lastSeen = data.last_sign_in_at ? new Date(data.last_sign_in_at).getTime() : 0;
+        if (Date.now() - lastSeen > 5 * 60 * 1000) {
+          supabase.from("members").update({ last_sign_in_at: new Date().toISOString() }).eq("id", currentUser.id).then(() => {});
+        }
         setProfile({
           ...data,
           is_owner: isOwnerAccount,
@@ -309,4 +313,5 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   return useContext(AuthContext);
 }
+
 
