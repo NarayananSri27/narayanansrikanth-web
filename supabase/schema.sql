@@ -1,4 +1,4 @@
--- ==============================================================================
+﻿-- ==============================================================================
 -- NARAYANAN SRIKANTH — PERSONAL WEBSITE DATABASE SCHEMA & RLS POLICIES
 -- Target: Supabase PostgreSQL
 -- ==============================================================================
@@ -78,11 +78,11 @@ ALTER TABLE public.research_entries ENABLE ROW LEVEL SECURITY;
 -- ==============================================================================
 
 -- Helper: Function to check if the current requesting user is the website owner
--- (Replace 'narayanan.srikanth@example.com' with your actual Google account email)
+-- (Replace 'narayanansri2007@gmail.com' with your actual Google account email)
 CREATE OR REPLACE FUNCTION public.is_owner()
 RETURNS BOOLEAN AS $$
 BEGIN
-  RETURN (auth.jwt() ->> 'email') = 'narayanan.srikanth@example.com';
+  RETURN (auth.jwt() ->> 'email') = 'narayanansri2007@gmail.com';
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -154,4 +154,5 @@ CREATE POLICY "Owner can manage research entries"
 -- 2. Storage policy for reading photos:
 --    (bucket_id = 'private-photos' AND auth.role() = 'authenticated')
 -- 3. Storage policy for uploading/deleting photos:
---    (bucket_id = 'private-photos' AND (auth.jwt() ->> 'email') = 'narayanan.srikanth@example.com')
+--    (bucket_id = 'private-photos' AND (auth.jwt() ->> 'email') = 'narayanansri2007@gmail.com')
+

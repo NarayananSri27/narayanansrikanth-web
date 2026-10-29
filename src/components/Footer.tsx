@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useAuth } from "./AuthProvider";
@@ -14,7 +14,7 @@ export function Footer() {
         <ul>
           <li>
             <a
-              href="https://github.com/placeholder-narayanan"
+              href="https://github.com/NarayananSri27"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -26,6 +26,9 @@ export function Footer() {
           </li>
           <li>
             <Link href="/links">links</Link>
+          </li>
+          <li>
+            <Link href="/privacy">privacy</Link>
           </li>
         </ul>
       </div>
@@ -80,3 +83,4 @@ export function Footer() {
     </footer>
   );
 }
+
