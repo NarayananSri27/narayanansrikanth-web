@@ -8,7 +8,7 @@ import { Lock } from "lucide-react";
 
 export function Navbar() {
   const pathname = usePathname();
-  const { user, isOwner, signOut, signInWithGoogle } = useAuth();
+  const { user, isOwner, isLoading, signOut, openAuthModal } = useAuth();
 
   const isSelected = (path: string) => {
     if (path === "/") return pathname === "/";
@@ -26,16 +26,22 @@ export function Navbar() {
 
         <ul id="navbar">
           <li className={`nav-item ${isSelected("/photos") ? "selected" : ""}`}>
-            <Link href="/photos" className="inline-flex items-center gap-1">
+            <Link
+              href="/photos"
+              className="inline-flex items-center gap-1"
+              onClick={(e) => {
+                if (!user && !isLoading) {
+                  e.preventDefault();
+                  openAuthModal("Sign in to view the photo gallery", "/photos");
+                }
+              }}
+            >
               <span>pics</span>
               {!user && <Lock className="w-2.5 h-2.5 opacity-60" />}
             </Link>
           </li>
           <li className={`nav-item ${isSelected("/research") ? "selected" : ""}`}>
-            <Link href="/research" className="inline-flex items-center gap-1">
-              <span>research</span>
-              {!user && <Lock className="w-2.5 h-2.5 opacity-60" />}
-            </Link>
+            <Link href="/research">research</Link>
           </li>
           <li className={`nav-item ${isSelected("/links") ? "selected" : ""}`}>
             <Link href="/links">links</Link>
@@ -63,7 +69,7 @@ export function Navbar() {
           ) : (
             <li className="nav-item">
               <button
-                onClick={() => signInWithGoogle()}
+                onClick={() => openAuthModal()}
                 className="hover:opacity-70 bg-transparent border-none p-0 text-inherit font-inherit cursor-pointer"
               >
                 sign in

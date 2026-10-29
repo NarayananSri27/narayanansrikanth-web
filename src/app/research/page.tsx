@@ -3,14 +3,23 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
-import { Trash2 } from "lucide-react";
+import { Lock, Trash2 } from "lucide-react";
 
 interface Entry {
   id: string;
   title: string;
   topic: string;
   abstract: string;
-  content: string;
+  content?: string; // only present for signed-in members
+  created_at: string;
+}
+
+interface Row {
+  id: string;
+  title: string;
+  topic: string;
+  abstract?: string | null;
+  content?: string;
   created_at: string;
 }
 
@@ -32,11 +41,13 @@ const ghostBtn = {
 } as const;
 
 export default function ResearchPage() {
-  const { user, isOwner, signInWithGoogle, isLoading } = useAuth();
+  const { user, isOwner, isLoading, openAuthModal } = useAuth();
+  const userId = user?.id ?? null;
   const [entries, setEntries] = useState<Entry[]>([]);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [pendingId, setPendingId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [topic, setTopic] = useState("Quantitative Risk");
@@ -44,22 +55,26 @@ export default function ResearchPage() {
   const [body, setBody] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (signedIn: boolean) => {
     const supabase = createClient();
     if (!supabase) {
       setBusy(false);
       return;
     }
     setBusy(true);
+    // Visitors can only read the title list. Abstracts and notes are for signed-in members.
+    const columns = signedIn ? "*" : "id, title, topic, created_at";
     const { data, error: loadError } = await supabase
       .from("research_entries")
-      .select("*")
+      .select(columns)
       .order("created_at", { ascending: false });
     if (loadError) {
       setError(loadError.message);
     } else {
+      setError("");
+      const rows = (data as unknown as Row[]) || [];
       setEntries(
-        (data || []).map((r) => ({
+        rows.map((r) => ({
           id: r.id,
           title: r.title,
           topic: r.topic,
@@ -73,33 +88,28 @@ export default function ResearchPage() {
   }, []);
 
   useEffect(() => {
-    if (user) load();
-  }, [user, load]);
+    if (!isLoading) load(Boolean(userId));
+  }, [isLoading, userId, load]);
 
-  if (isLoading) {
-    return (
-      <div style={{ textAlign: "center", padding: "80px 0" }}>
-        <p style={{ fontWeight: 100 }}>loading...</p>
-      </div>
-    );
-  }
+  // After signing in from a clicked title, open that note automatically
+  useEffect(() => {
+    if (
+      userId &&
+      pendingId &&
+      entries.some((e) => e.id === pendingId && e.content !== undefined)
+    ) {
+      setExpandedId(pendingId);
+      setPendingId(null);
+    }
+  }, [userId, pendingId, entries]);
 
-  if (!user) {
-    return (
-      <div style={{ maxWidth: "600px", margin: "auto", textAlign: "center", padding: "60px 20px" }}>
-        <h1 style={{ fontWeight: 100, marginBottom: "15px" }}>research</h1>
-        <p className="subtitle">engineering notes, models, and project ideas</p>
-        <p style={{ fontWeight: 200, fontSize: "16px", marginBottom: "30px" }}>
-          This notebook is private. Sign in with Google to explore.
-        </p>
-        <button
-          onClick={() => signInWithGoogle()}
-          style={{ ...ghostBtn, padding: "8px 24px", fontSize: "18px", fontWeight: 200 }}
-        >
-          sign in with google
-        </button>
-      </div>
-    );
+  function toggle(entry: Entry) {
+    if (!user) {
+      setPendingId(entry.id);
+      openAuthModal("Sign in to read this research note");
+      return;
+    }
+    setExpandedId(expandedId === entry.id ? null : entry.id);
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -124,7 +134,7 @@ export default function ResearchPage() {
     setAbstract("");
     setBody("");
     setOpen(false);
-    await load();
+    await load(true);
   }
 
   async function handleDelete(id: string, e: React.MouseEvent) {
@@ -138,7 +148,7 @@ export default function ResearchPage() {
       return;
     }
     if (expandedId === id) setExpandedId(null);
-    await load();
+    await load(true);
   }
 
   return (
@@ -167,7 +177,7 @@ export default function ResearchPage() {
       ) : (
         <div style={{ marginTop: "30px" }}>
           {entries.map((entry) => {
-            const isExpanded = expandedId === entry.id;
+            const isExpanded = expandedId === entry.id && entry.content !== undefined;
             const date = new Date(entry.created_at).toLocaleDateString("en-US", {
               month: "long",
               year: "numeric",
@@ -182,7 +192,7 @@ export default function ResearchPage() {
                 }}
               >
                 <div
-                  onClick={() => setExpandedId(isExpanded ? null : entry.id)}
+                  onClick={() => toggle(entry)}
                   style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}
                 >
                   <div>
@@ -192,14 +202,37 @@ export default function ResearchPage() {
                         fontSize: "22px",
                         fontWeight: 200,
                         borderBottom: "0.5px dashed currentColor",
-                        display: "inline-block",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
                       }}
                     >
                       {entry.title}
+                      {!user && <Lock className="w-3 h-3 opacity-50" />}
                     </h3>
                     <p style={{ margin: "5px 0 0 0", fontSize: "13px", opacity: 0.6 }}>
                       {entry.topic} · {date}
                     </p>
+                    {!user && (
+                      <p
+                        aria-hidden="true"
+                        style={{
+                          margin: "10px 0 0 0",
+                          fontSize: "15px",
+                          fontWeight: 200,
+                          opacity: 0.75,
+                          filter: "blur(6px)",
+                          userSelect: "none",
+                        }}
+                      >
+                        A short summary of this note, written for members. Sign in with Google to read the abstract and the full notes.
+                      </p>
+                    )}
+                    {user && entry.abstract && !isExpanded && (
+                      <p style={{ margin: "10px 0 0 0", fontSize: "15px", fontWeight: 200, opacity: 0.75 }}>
+                        {entry.abstract}
+                      </p>
+                    )}
                   </div>
                   {isOwner && (
                     <button
@@ -219,7 +252,7 @@ export default function ResearchPage() {
                         {entry.abstract}
                       </p>
                     )}
-                    {entry.content.split(/\n\s*\n/).map((para, idx) => (
+                    {(entry.content || "").split(/\n\s*\n/).map((para, idx) => (
                       <p key={idx} style={{ marginBottom: "14px", fontWeight: 200, whiteSpace: "pre-wrap" }}>
                         {para}
                       </p>
@@ -261,9 +294,9 @@ export default function ResearchPage() {
             <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               <input type="text" placeholder="Title..." required value={title} onChange={(e) => setTitle(e.target.value)} style={field} />
               <input type="text" placeholder="Topic..." value={topic} onChange={(e) => setTopic(e.target.value)} style={field} />
-              <input type="text" placeholder="Short abstract (optional)..." value={abstract} onChange={(e) => setAbstract(e.target.value)} style={field} />
+              <input type="text" placeholder="Short abstract (members only)..." value={abstract} onChange={(e) => setAbstract(e.target.value)} style={field} />
               <textarea
-                placeholder="Notes... (leave a blank line between paragraphs)"
+                placeholder="Notes... (members only; leave a blank line between paragraphs)"
                 rows={8}
                 required
                 value={body}
