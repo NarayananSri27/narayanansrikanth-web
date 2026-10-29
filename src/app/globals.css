@@ -583,3 +583,25 @@ footer a { font-size: var(--footer-size) !important; }
   border-bottom: 0.5px dashed currentColor;
 }
 .admin-table a:hover { opacity: 0.7; }
+
+/* ===== PHONE LAYOUT (screens up to 768px wide) ===== */
+@media (max-width: 768px) {
+  :root { --nav-size: 17px; --title-size: 20px; }
+  :root { --toggle-w: 54px; --toggle-h: 28px; }
+  nav {
+    flex-direction: column !important;
+    gap: 12px;
+    padding: 16px 12px 14px !important;
+  }
+  nav > div:first-child { position: static !important; text-align: center; }
+  #navbar {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 18px !important;
+    max-width: 100%;
+  }
+  .toggle-wrapper { top: 14px !important; right: 12px !important; }
+  .footer-content { flex-direction: column; gap: 8px; text-align: center; }
+  .footer-content ul { flex-wrap: wrap; justify-content: center; }
+  body { overflow-x: hidden; }
+}
