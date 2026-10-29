@@ -501,3 +501,6 @@ body.dark-mode .contact a {
   color: #d3d3d3;
   border-bottom: 0.5px dashed rgb(244, 249, 249);
 }
+
+/* ===== GALLERY PHOTOS: remove tint overlay ===== */
+.album::before { display: none !important; }
