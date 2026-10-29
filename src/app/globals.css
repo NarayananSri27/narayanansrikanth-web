@@ -504,3 +504,13 @@ body.dark-mode .contact a {
 
 /* ===== GALLERY PHOTOS: remove tint overlay ===== */
 .album::before { display: none !important; }
+
+/* ===== FOOTER SIZE (change these numbers to resize the footer) ===== */
+:root { --footer-size: 12px; --footer-pad: 8px; --footer-top: 30px; }
+footer {
+  margin-top: var(--footer-top) !important;
+  padding: var(--footer-pad) 0 !important;
+}
+.footer-content p,
+footer a { font-size: var(--footer-size) !important; }
+.footer-content ul { gap: calc(var(--footer-size) * 1.3) !important; }
