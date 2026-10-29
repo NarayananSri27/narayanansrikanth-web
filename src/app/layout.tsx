@@ -7,6 +7,7 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { InstagramModal } from "@/components/InstagramModal";
 import { ActivityTracker } from "@/components/ActivityTracker";
+import { GoatCounterTracker } from "@/components/GoatCounterTracker";
 
 export const metadata: Metadata = {
   title: "Narayanan Srikanth",
@@ -24,7 +25,7 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const goatcounterCode = process.env.NEXT_PUBLIC_GOATCOUNTER_CODE;
+  const goatcounterCode = process.env.NEXT_PUBLIC_GOATCOUNTER_CODE || "narayanansrikanth";
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -36,6 +37,7 @@ export default function RootLayout({
         >
           <AuthProvider>
             <ActivityTracker />
+            <GoatCounterTracker />
             <InstagramModal />
             <div className="content">
               <Navbar />
@@ -58,5 +60,7 @@ export default function RootLayout({
     </html>
   );
 }
+
+
 
 
