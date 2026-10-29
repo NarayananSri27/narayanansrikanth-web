@@ -1,89 +1,95 @@
-# Quick Guide: How to Edit and Own Your Website
+# How to Edit and Run Your Website
 
-All your source code is located locally on your machine at:
-`C:\Users\naray\.gemini\antigravity\scratch\narayanansrikanth-web`
+Your site: https://narayanansrikanth-web.vercel.app
+Your code: https://github.com/NarayananSri27/narayanansrikanth-web
+Your project folder: C:\Users\naray\.gemini\antigravity\scratch\narayanansrikanth-web
 
----
+Always run commands from inside the project folder:
 
-## 1. How to Open the Code
-
-### In Antigravity:
-1. Click **File** > **Open Folder...** (or press `Ctrl + K, Ctrl + O`).
-2. Navigate to:
-   `C:\Users\naray\.gemini\antigravity\scratch\narayanansrikanth-web`
-3. Click **Select Folder**. The entire project tree will now appear in your sidebar.
-
-### In Windows File Explorer:
-1. Press `Win + R`, paste:
-   ```
-   C:\Users\naray\.gemini\antigravity\scratch\narayanansrikanth-web
-   ```
-   and press **Enter**.
+    cd C:\Users\naray\.gemini\antigravity\scratch\narayanansrikanth-web
 
 ---
 
-## 2. Where to Make Changes
+## 1. Preview the site on your computer
 
-| What you want to change | File to edit |
+    npm run dev
+
+Open http://localhost:3000. It keeps running until you press Ctrl + C.
+After saving a change, refresh with Ctrl + Shift + R.
+
+## 2. Publish your changes to the live site
+
+    git add .
+    git commit -m "describe what you changed"
+    git push
+
+Vercel rebuilds automatically. Watch the Deployments tab on vercel.com until it says Ready.
+Commit often. Each commit is a snapshot you can go back to.
+
+## 3. Where things live
+
+| What | File |
 |---|---|
-| **Your Bio & Homepage Text** | `src/app/page.tsx` or `src/data/content.ts` |
-| **Your Portrait Photo** | Replace `public/img/main.webp` with your own photo |
-| **Links (`/links`)** | `src/data/content.ts` or `src/app/links/page.tsx` |
-| **Contact Email & Notes** | `src/data/content.ts` or `src/app/contact/page.tsx` |
-| **Colors, Fonts & Theme** | `src/app/globals.css` |
-| **Navigation Bar Items** | `src/components/Navbar.tsx` |
-| **Photo Gallery Images** | `src/app/photos/page.tsx` |
-| **Research Notebook Notes** | `src/app/research/page.tsx` |
-| **Owner Email Setting** | `.env.local` (`NEXT_PUBLIC_OWNER_EMAIL`) |
+| Home page text and photo | src/app/page.tsx (photo file: public/img/Narayanan_F1.jpeg) |
+| Links page | src/data/content.ts (the "links" list) |
+| Contact page | src/app/contact/page.tsx |
+| Privacy policy | src/app/privacy/page.tsx |
+| Header | src/components/Navbar.tsx |
+| Footer | src/components/Footer.tsx |
+| All colors, sizes, spacing | src/app/globals.css |
+| Light/dark default | src/app/layout.tsx (defaultTheme="light") |
+| Pics and research content | Added from the live site while signed in as owner (stored in Supabase) |
 
----
+## 4. Change a size or spacing (one number each)
 
-## 3. How to Run Locally While Editing
+These settings sit near the bottom of globals.css. Change one with a command like this
+(swap the name and the number):
 
-Whenever you want to make edits, open your terminal (in PowerShell or in Antigravity's integrated terminal) inside the project folder:
+    (Get-Content src\app\globals.css) -replace '--nav-size: \d+px','--nav-size: 20px' | Set-Content src\app\globals.css
 
-```powershell
-cd C:\Users\naray\.gemini\antigravity\scratch\narayanansrikanth-web
-npm run dev
-```
+| Setting | Controls |
+|---|---|
+| --nav-size | Header link text size |
+| --title-size | Your name in the header |
+| --toggle-w, --toggle-h, --toggle-speed | Light/dark switch width, height, speed |
+| --text-top | How far down "hey there" starts |
+| --h1-size, --h1-gap | "hey there" size and the space under it |
+| --body-size, --line-height, --para-gap | Paragraph text size, line spacing, space between paragraphs |
+| --footer-size, --footer-pad, --footer-top | Footer text size, height, gap above |
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-**Any time you save a file, the browser updates instantly (hot-reload).**
+Note: these commands change the setting everywhere it appears, including the PHONE LAYOUT
+block at the end of globals.css. To change phone sizes only, edit the numbers inside that block.
 
----
+## 5. Change a sentence
 
-## 4. How to Replace Your Picture
+Edit the words inside the <p> ... </p> tags in src/app/page.tsx and save.
+Type an apostrophe as &apos; and an ampersand as &amp;.
+Check that it saved:
 
-1. Find any photo you like (e.g. `my-photo.jpg` or `portrait.png`).
-2. Rename or copy it to:
-   `public/img/main.webp` (or `public/img/portrait.jpg`)
-3. If you use a `.jpg` or `.png` extension, simply change `<img src="/img/main.webp" ...>` to `<img src="/img/portrait.jpg" ...>` in `src/app/page.tsx`.
+    findstr /n "some words from your sentence" src\app\page.tsx
 
----
+## 6. Your services
 
-## 5. How to Save Your Work to GitHub
+| Service | What it does | Where |
+|---|---|---|
+| Vercel | Hosts the live site | vercel.com |
+| GitHub | Stores your code | github.com/NarayananSri27/narayanansrikanth-web |
+| Supabase | Sign-in, members, photos, research notes, visit log | supabase.com |
+| Google Cloud | Google sign-in credentials | console.cloud.google.com |
+| GoatCounter | Visitor counts for everyone | narayanansrikanth.goatcounter.com |
 
-This folder is already an active Git repository!
+Never share or commit: the Supabase service_role key, the Supabase database password,
+or the Google client secret. Your .env.local file is not uploaded to GitHub on purpose.
+If you move to a new computer, copy .env.local over by hand.
 
-```powershell
-# 1. Check changed files
-git status
+## 7. If something breaks
 
-# 2. Stage and commit your edits
-git add .
-git commit -m "update bio and add new projects"
-
-# 3. Connect to your GitHub repository (run once after creating repo on GitHub)
-git remote add origin https://github.com/<your-username>/<your-repo-name>.git
-git branch -M main
-git push -u origin main
-```
-
----
-
-## 6. How to Deploy Online for Free (Vercel)
-
-1. Push your repository to your GitHub account.
-2. Sign in to [Vercel.com](https://vercel.com) (free).
-3. Click **Add New...** > **Project** and select your GitHub repository.
-4. Click **Deploy**. Vercel will give you a live HTTPS link (e.g. `narayanansrikanth.vercel.app`) that automatically updates every time you push code to GitHub.
+- Site will not compile: read the first red line in the terminal. If a file looks empty or
+  garbled, restore it with: git checkout -- path\to\file
+- A change does not show up: you may be looking at an old server. Press Ctrl + C, then run
+  Remove-Item -Recurse -Force .next, then npm run dev. Refresh with Ctrl + Shift + R.
+- Changes in the editor do not seem to save: check the file with findstr, and make sure you
+  opened the folder above in your editor.
+- Sign-in stops working: check that your Supabase project is not paused (supabase.com dashboard).
+- Live site looks different from your computer: confirm the push finished and Vercel says Ready.
+- You broke something and want the last good version: git log --oneline shows your snapshots.
