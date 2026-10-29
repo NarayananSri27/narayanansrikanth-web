@@ -1,90 +1,80 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { Plus, Trash2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { Trash2 } from "lucide-react";
 
-interface ResearchEntry {
+interface Entry {
   id: string;
   title: string;
   topic: string;
-  date: string;
   abstract: string;
-  tags: string[];
-  content: string[];
-  codeSnippet?: string;
-  codeLang?: string;
+  content: string;
+  created_at: string;
 }
 
-const INITIAL_ENTRIES: ResearchEntry[] = [
-  {
-    id: "r1",
-    title: "non-normal tail risk & historical drawdown metrics",
-    topic: "Quantitative Risk",
-    date: "February 2026",
-    abstract:
-      "Evaluating empirical kurtosis and regime-shifting volatility clusters vs. Gaussian assumption in risk management.",
-    tags: ["Risk Research", "Statistics", "Python"],
-    content: [
-      "Traditional financial risk models frequently rely on normal distributions for mathematical tractability, but empirical returns display negative skewness and heavy leptokurtosis.",
-      "Value at Risk (VaR) does not satisfy subadditivity and neglects the magnitude of tail events. Conditional Value at Risk (CVaR) offers a coherent alternative by averaging losses strictly within the tail percentile.",
-      "In stressed liquidity environments, assets experience correlation breakdown where diversification deteriorates when protection is most needed.",
-    ],
-    codeSnippet: `# Calculating Historical Expected Shortfall (CVaR)
-import numpy as np
+const field = {
+  padding: "8px",
+  background: "transparent",
+  border: "0.5px solid var(--hr-color)",
+  color: "inherit",
+  fontFamily: "inherit",
+} as const;
 
-def calculate_cvar(returns, alpha=0.05):
-    var_threshold = np.percentile(returns, alpha * 100)
-    tail_losses = returns[returns <= var_threshold]
-    return -np.mean(tail_losses)
-`,
-    codeLang: "python",
-  },
-  {
-    id: "r2",
-    title: "kalman filter sensor fusion for aerospace attitude estimation",
-    topic: "Aerospace Guidance",
-    date: "December 2025",
-    abstract:
-      "Integrating gyroscope rate integration with accelerometer gravity vectors for stable pitch and roll estimation.",
-    tags: ["Control Theory", "Embedded", "C++"],
-    content: [
-      "MEMS gyroscopes offer low latency but suffer from unbounded integration drift over time. Accelerometers measure the gravity vector accurately over long intervals but are vulnerable to dynamic linear acceleration vibration.",
-      "The discrete-time linear Kalman filter optimally balances these complimentary noise characteristics by continuously updating error covariance matrices and adjusting the Kalman gain.",
-    ],
-    codeSnippet: `// Predict Step: A Priori State Estimate
-state_pred = F * state_prev + B * control_input;
-P_pred = F * P_prev * F.transpose() + Q;
-
-// Update Step: Innovation and Optimal Gain
-Matrix K = P_pred * H.transpose() * (H * P_pred * H.transpose() + R).inverse();
-state_updated = state_pred + K * (measurement - H * state_pred);
-`,
-    codeLang: "cpp",
-  },
-  {
-    id: "r3",
-    title: "deterministic memory allocation in low-latency systems",
-    topic: "Software Architecture",
-    date: "October 2025",
-    abstract:
-      "Eliminating garbage collection pauses and cache misses using contiguous circular buffers and arena allocators.",
-    tags: ["Systems", "Low Latency"],
-    content: [
-      "In high-throughput message processing, heap allocation in the critical path introduces unpredictable latency jitter caused by page faults and allocator lock contention.",
-      "Pre-allocating contiguous memory pools (arenas or fixed-size ring buffers) ensures O(1) allocation and sequential CPU cache line prefetching.",
-    ],
-  },
-];
+const ghostBtn = {
+  background: "transparent",
+  color: "inherit",
+  border: "0.5px dashed currentColor",
+  padding: "4px 14px",
+  fontSize: "13px",
+  cursor: "pointer",
+} as const;
 
 export default function ResearchPage() {
   const { user, isOwner, signInWithGoogle, isLoading } = useAuth();
-  const [entries, setEntries] = useState<ResearchEntry[]>(INITIAL_ENTRIES);
-  const [expandedId, setExpandedId] = useState<string | null>(INITIAL_ENTRIES[0].id);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [newTopic, setNewTopic] = useState("Quantitative Risk");
-  const [newBody, setNewBody] = useState("");
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [busy, setBusy] = useState(true);
+  const [error, setError] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [topic, setTopic] = useState("Quantitative Risk");
+  const [abstract, setAbstract] = useState("");
+  const [body, setBody] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    const supabase = createClient();
+    if (!supabase) {
+      setBusy(false);
+      return;
+    }
+    setBusy(true);
+    const { data, error: loadError } = await supabase
+      .from("research_entries")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (loadError) {
+      setError(loadError.message);
+    } else {
+      setEntries(
+        (data || []).map((r) => ({
+          id: r.id,
+          title: r.title,
+          topic: r.topic,
+          abstract: r.abstract || "",
+          content: r.content,
+          created_at: r.created_at,
+        }))
+      );
+    }
+    setBusy(false);
+  }, []);
+
+  useEffect(() => {
+    if (user) load();
+  }, [user, load]);
 
   if (isLoading) {
     return (
@@ -94,7 +84,6 @@ export default function ResearchPage() {
     );
   }
 
-  // Signed out restriction prompt
   if (!user) {
     return (
       <div style={{ maxWidth: "600px", margin: "auto", textAlign: "center", padding: "60px 20px" }}>
@@ -105,15 +94,7 @@ export default function ResearchPage() {
         </p>
         <button
           onClick={() => signInWithGoogle()}
-          style={{
-            background: "transparent",
-            color: "inherit",
-            border: "0.5px dashed currentColor",
-            padding: "8px 24px",
-            fontSize: "18px",
-            fontWeight: 200,
-            cursor: "pointer",
-          }}
+          style={{ ...ghostBtn, padding: "8px 24px", fontSize: "18px", fontWeight: 200 }}
         >
           sign in with google
         </button>
@@ -121,142 +102,137 @@ export default function ResearchPage() {
     );
   }
 
-  const handleCreateEntry = (e: React.FormEvent) => {
+  async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!newTitle) return;
-
-    const newEntry: ResearchEntry = {
-      id: `r-${Date.now()}`,
-      title: newTitle.toLowerCase(),
-      topic: newTopic,
-      date: new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" }),
-      abstract: "",
-      tags: ["Engineering"],
-      content: newBody ? newBody.split("\n\n").filter(Boolean) : ["No content."],
-    };
-
-    setEntries([newEntry, ...entries]);
-    setExpandedId(newEntry.id);
-    setNewTitle("");
-    setNewBody("");
-    setIsModalOpen(false);
-  };
-
-  const handleDelete = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (confirm("Delete this entry?")) {
-      setEntries(entries.filter((entry) => entry.id !== id));
-      if (expandedId === id) setExpandedId(null);
+    const supabase = createClient();
+    if (!supabase || !user) return;
+    setSaving(true);
+    setError("");
+    const ins = await supabase.from("research_entries").insert({
+      title,
+      topic,
+      abstract,
+      content: body,
+      created_by: user.id,
+    });
+    setSaving(false);
+    if (ins.error) {
+      setError(ins.error.message);
+      return;
     }
-  };
+    setTitle("");
+    setAbstract("");
+    setBody("");
+    setOpen(false);
+    await load();
+  }
+
+  async function handleDelete(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirm("Delete this entry?")) return;
+    const supabase = createClient();
+    if (!supabase) return;
+    const del = await supabase.from("research_entries").delete().eq("id", id);
+    if (del.error) {
+      setError(del.error.message);
+      return;
+    }
+    if (expandedId === id) setExpandedId(null);
+    await load();
+  }
 
   return (
     <div style={{ maxWidth: "800px", margin: "auto", padding: "0 20px" }}>
-      <h1
-        style={{
-          textAlign: "center",
-          fontWeight: 100,
-          marginTop: "30px",
-          marginBottom: "10px",
-        }}
-      >
+      <h1 style={{ textAlign: "center", fontWeight: 100, marginTop: "30px", marginBottom: "10px" }}>
         research
       </h1>
       <p className="subtitle">working notes, quantitative models, and ideas</p>
 
       {isOwner && (
         <div style={{ textAlign: "center", marginBottom: "30px" }}>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            style={{
-              background: "transparent",
-              color: "inherit",
-              border: "0.5px dashed currentColor",
-              padding: "4px 14px",
-              fontSize: "13px",
-              cursor: "pointer",
-            }}
-          >
+          <button onClick={() => setOpen(true)} style={ghostBtn}>
             + new note (owner)
           </button>
         </div>
       )}
 
-      <div style={{ marginTop: "30px" }}>
-        {entries.map((entry) => {
-          const isExpanded = expandedId === entry.id;
-          return (
-            <div
-              key={entry.id}
-              style={{
-                marginBottom: "35px",
-                paddingBottom: "25px",
-                borderBottom: "0.5px solid var(--hr-color)",
-              }}
-            >
+      {error && (
+        <p style={{ textAlign: "center", fontSize: "14px", opacity: 0.8 }}>error: {error}</p>
+      )}
+
+      {busy ? (
+        <p style={{ textAlign: "center", fontWeight: 100 }}>loading notes...</p>
+      ) : entries.length === 0 ? (
+        <p style={{ textAlign: "center", fontWeight: 100 }}>no notes yet.</p>
+      ) : (
+        <div style={{ marginTop: "30px" }}>
+          {entries.map((entry) => {
+            const isExpanded = expandedId === entry.id;
+            const date = new Date(entry.created_at).toLocaleDateString("en-US", {
+              month: "long",
+              year: "numeric",
+            });
+            return (
               <div
-                onClick={() => setExpandedId(isExpanded ? null : entry.id)}
-                style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}
+                key={entry.id}
+                style={{
+                  marginBottom: "35px",
+                  paddingBottom: "25px",
+                  borderBottom: "0.5px solid var(--hr-color)",
+                }}
               >
-                <div>
-                  <h3
-                    style={{
-                      margin: 0,
-                      fontSize: "22px",
-                      fontWeight: 200,
-                      borderBottom: "0.5px dashed currentColor",
-                      display: "inline-block",
-                    }}
-                  >
-                    {entry.title}
-                  </h3>
-                  <p style={{ margin: "5px 0 0 0", fontSize: "13px", opacity: 0.6 }}>
-                    {entry.topic} · {entry.date}
-                  </p>
-                </div>
-
-                {isOwner && (
-                  <button
-                    onClick={(e) => handleDelete(entry.id, e)}
-                    style={{ background: "none", border: "none", color: "inherit", opacity: 0.5, cursor: "pointer" }}
-                    title="Delete"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {isExpanded && (
-                <div style={{ marginTop: "18px", fontSize: "16px", lineHeight: "1.6em" }}>
-                  {entry.content.map((p, idx) => (
-                    <p key={idx} style={{ marginBottom: "14px", fontWeight: 200 }}>
-                      {p}
-                    </p>
-                  ))}
-
-                  {entry.codeSnippet && (
-                    <pre
+                <div
+                  onClick={() => setExpandedId(isExpanded ? null : entry.id)}
+                  style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}
+                >
+                  <div>
+                    <h3
                       style={{
-                        padding: "15px",
-                        background: "rgba(0,0,0,0.06)",
-                        fontSize: "13px",
-                        overflowX: "auto",
-                        borderLeft: "2px solid var(--hr-color)",
-                        fontFamily: "monospace",
-                        marginTop: "15px",
+                        margin: 0,
+                        fontSize: "22px",
+                        fontWeight: 200,
+                        borderBottom: "0.5px dashed currentColor",
+                        display: "inline-block",
                       }}
                     >
-                      <code>{entry.codeSnippet}</code>
-                    </pre>
+                      {entry.title}
+                    </h3>
+                    <p style={{ margin: "5px 0 0 0", fontSize: "13px", opacity: 0.6 }}>
+                      {entry.topic} · {date}
+                    </p>
+                  </div>
+                  {isOwner && (
+                    <button
+                      onClick={(e) => handleDelete(entry.id, e)}
+                      style={{ background: "none", border: "none", color: "inherit", opacity: 0.5, cursor: "pointer" }}
+                      title="Delete"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   )}
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
 
-      {isModalOpen && (
+                {isExpanded && (
+                  <div style={{ marginTop: "18px", fontSize: "16px", lineHeight: "1.6em" }}>
+                    {entry.abstract && (
+                      <p style={{ marginBottom: "14px", fontWeight: 200, opacity: 0.75 }}>
+                        {entry.abstract}
+                      </p>
+                    )}
+                    {entry.content.split(/\n\s*\n/).map((para, idx) => (
+                      <p key={idx} style={{ marginBottom: "14px", fontWeight: 200, whiteSpace: "pre-wrap" }}>
+                        {para}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {open && (
         <div
           role="dialog"
           aria-modal="true"
@@ -281,53 +257,33 @@ export default function ResearchPage() {
               border: "1px solid var(--hr-color)",
             }}
           >
-            <h3 style={{ fontWeight: 100, marginTop: 0 }}>Create Research Note</h3>
-            <form onSubmit={handleCreateEntry} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <input
-                type="text"
-                placeholder="Title..."
-                required
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                style={{
-                  padding: "8px",
-                  background: "transparent",
-                  border: "0.5px solid var(--hr-color)",
-                  color: "inherit",
-                }}
-              />
+            <h3 style={{ fontWeight: 100, marginTop: 0 }}>New Research Note</h3>
+            <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <input type="text" placeholder="Title..." required value={title} onChange={(e) => setTitle(e.target.value)} style={field} />
+              <input type="text" placeholder="Topic..." value={topic} onChange={(e) => setTopic(e.target.value)} style={field} />
+              <input type="text" placeholder="Short abstract (optional)..." value={abstract} onChange={(e) => setAbstract(e.target.value)} style={field} />
               <textarea
-                placeholder="Notes and paragraphs..."
-                rows={6}
-                value={newBody}
-                onChange={(e) => setNewBody(e.target.value)}
-                style={{
-                  padding: "8px",
-                  background: "transparent",
-                  border: "0.5px solid var(--hr-color)",
-                  color: "inherit",
-                  fontFamily: "inherit",
-                }}
+                placeholder="Notes... (leave a blank line between paragraphs)"
+                rows={8}
+                required
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                style={field}
               />
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => setOpen(false)}
                   style={{ background: "none", border: "none", cursor: "pointer", color: "inherit" }}
                 >
                   cancel
                 </button>
                 <button
                   type="submit"
-                  style={{
-                    background: "transparent",
-                    border: "0.5px solid currentColor",
-                    padding: "4px 12px",
-                    cursor: "pointer",
-                    color: "inherit",
-                  }}
+                  disabled={saving}
+                  style={{ background: "transparent", border: "0.5px solid currentColor", padding: "4px 12px", cursor: "pointer", color: "inherit" }}
                 >
-                  save note
+                  {saving ? "saving..." : "save note"}
                 </button>
               </div>
             </form>

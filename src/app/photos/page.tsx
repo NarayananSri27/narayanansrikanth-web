@@ -1,77 +1,95 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { X, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { X, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 
 interface Photo {
   id: string;
   title: string;
   caption: string;
-  date: string;
   album: string;
+  storage_path: string;
+  created_at: string;
   url: string;
 }
 
-const INITIAL_PHOTOS: Photo[] = [
-  {
-    id: "p1",
-    title: "Sherbrooke Winter",
-    caption: "Low sun and geometry along Sherbrooke Street in Montréal.",
-    date: "January 2026",
-    album: "Montréal & Campus",
-    url: "https://images.unsplash.com/photo-1517824806704-9040b037703b?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    id: "p2",
-    title: "Lab Workbench",
-    caption: "Oscilloscope traces, leads, and telemetry breadboard testing.",
-    date: "November 2025",
-    album: "Aviation & Labs",
-    url: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    id: "p3",
-    title: "McGill Arts Dusk",
-    caption: "Arts Building under overcast autumn clouds.",
-    date: "October 2025",
-    album: "Montréal & Campus",
-    url: "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    id: "p4",
-    title: "35mm Analog Grain",
-    caption: "High-contrast monochrome roll developed by hand.",
-    date: "August 2025",
-    album: "35mm Film Scans",
-    url: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    id: "p5",
-    title: "Structural Angles",
-    caption: "Concrete and shadow study.",
-    date: "June 2025",
-    album: "Architecture",
-    url: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    id: "p6",
-    title: "Wind Tunnel Aerodynamics",
-    caption: "Flow visualization setup and pressure transducer rigs.",
-    date: "April 2025",
-    album: "Aviation & Labs",
-    url: "https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&w=1200&q=80",
-  },
-];
+const BUCKET = "private-photos";
+
+const field = {
+  padding: "8px",
+  background: "transparent",
+  border: "0.5px solid var(--hr-color)",
+  color: "inherit",
+  fontFamily: "inherit",
+} as const;
+
+const ghostBtn = {
+  background: "transparent",
+  color: "inherit",
+  border: "0.5px dashed currentColor",
+  padding: "4px 14px",
+  fontSize: "13px",
+  cursor: "pointer",
+} as const;
 
 export default function PhotosPage() {
   const { user, isOwner, signInWithGoogle, isLoading } = useAuth();
-  const [photos, setPhotos] = useState<Photo[]>(INITIAL_PHOTOS);
-  const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
-  const [isUploadOpen, setIsUploadOpen] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [newUrl, setNewUrl] = useState("");
-  const [newAlbum, setNewAlbum] = useState("Montréal & Campus");
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [busy, setBusy] = useState(true);
+  const [error, setError] = useState("");
+  const [active, setActive] = useState<number | null>(null);
+  const [open, setOpen] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [title, setTitle] = useState("");
+  const [caption, setCaption] = useState("");
+  const [album, setAlbum] = useState("Moments");
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    const supabase = createClient();
+    if (!supabase) {
+      setBusy(false);
+      return;
+    }
+    setBusy(true);
+    const { data, error: loadError } = await supabase
+      .from("photos")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (loadError) {
+      setError(loadError.message);
+      setBusy(false);
+      return;
+    }
+    const rows = data || [];
+    const urls: Record<string, string> = {};
+    if (rows.length > 0) {
+      const { data: signed } = await supabase.storage
+        .from(BUCKET)
+        .createSignedUrls(rows.map((r) => r.storage_path), 3600);
+      (signed || []).forEach((s) => {
+        if (s.path && s.signedUrl) urls[s.path] = s.signedUrl;
+      });
+    }
+    setPhotos(
+      rows.map((r) => ({
+        id: r.id,
+        title: r.title,
+        caption: r.caption || "",
+        album: r.album,
+        storage_path: r.storage_path,
+        created_at: r.created_at,
+        url: urls[r.storage_path] || "",
+      }))
+    );
+    setBusy(false);
+  }, []);
+
+  useEffect(() => {
+    if (user) load();
+  }, [user, load]);
 
   if (isLoading) {
     return (
@@ -81,7 +99,6 @@ export default function PhotosPage() {
     );
   }
 
-  // Signed out restriction prompt
   if (!user) {
     return (
       <div style={{ maxWidth: "600px", margin: "auto", textAlign: "center", padding: "60px 20px" }}>
@@ -92,15 +109,7 @@ export default function PhotosPage() {
         </p>
         <button
           onClick={() => signInWithGoogle()}
-          style={{
-            background: "transparent",
-            color: "inherit",
-            border: "0.5px dashed currentColor",
-            padding: "8px 24px",
-            fontSize: "18px",
-            fontWeight: 200,
-            cursor: "pointer",
-          }}
+          style={{ ...ghostBtn, padding: "8px 24px", fontSize: "18px", fontWeight: 200 }}
         >
           sign in with google
         </button>
@@ -108,101 +117,112 @@ export default function PhotosPage() {
     );
   }
 
-  const handleAddPhoto = (e: React.FormEvent) => {
+  async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
-    if (!newUrl) return;
-
-    const newPhoto: Photo = {
-      id: `p-${Date.now()}`,
-      title: newTitle || "untitled",
-      caption: "",
-      date: new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" }),
-      album: newAlbum,
-      url: newUrl,
-    };
-
-    setPhotos([newPhoto, ...photos]);
-    setNewTitle("");
-    setNewUrl("");
-    setIsUploadOpen(false);
-  };
-
-  const handleDeletePhoto = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (confirm("Delete this photo?")) {
-      setPhotos(photos.filter((p) => p.id !== id));
-      if (activePhotoIndex !== null) setActivePhotoIndex(null);
+    const supabase = createClient();
+    if (!supabase || !file || !user) return;
+    setSaving(true);
+    setError("");
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = `${Date.now()}-${safeName}`;
+    const up = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type });
+    if (up.error) {
+      setError(up.error.message);
+      setSaving(false);
+      return;
     }
-  };
+    const ins = await supabase.from("photos").insert({
+      title: title || "untitled",
+      caption,
+      album,
+      storage_path: path,
+      created_by: user.id,
+    });
+    if (ins.error) {
+      await supabase.storage.from(BUCKET).remove([path]);
+      setError(ins.error.message);
+      setSaving(false);
+      return;
+    }
+    setFile(null);
+    setTitle("");
+    setCaption("");
+    setOpen(false);
+    setSaving(false);
+    await load();
+  }
+
+  async function handleDelete(p: Photo, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirm("Delete this photo?")) return;
+    const supabase = createClient();
+    if (!supabase) return;
+    const del = await supabase.from("photos").delete().eq("id", p.id);
+    if (del.error) {
+      setError(del.error.message);
+      return;
+    }
+    await supabase.storage.from(BUCKET).remove([p.storage_path]);
+    setActive(null);
+    await load();
+  }
+
+  const current = active !== null ? photos[active] : null;
 
   return (
     <div>
-      <h1
-        style={{
-          textAlign: "center",
-          fontWeight: 100,
-          marginTop: "30px",
-          marginBottom: "10px",
-        }}
-      >
+      <h1 style={{ textAlign: "center", fontWeight: 100, marginTop: "30px", marginBottom: "10px" }}>
         pics
       </h1>
       <p className="subtitle">a collection of photos and moments</p>
 
       {isOwner && (
         <div style={{ textAlign: "center", marginBottom: "30px" }}>
-          <button
-            onClick={() => setIsUploadOpen(true)}
-            style={{
-              background: "transparent",
-              color: "inherit",
-              border: "0.5px dashed currentColor",
-              padding: "4px 14px",
-              fontSize: "13px",
-              cursor: "pointer",
-            }}
-          >
+          <button onClick={() => setOpen(true)} style={ghostBtn}>
             + add photo (owner)
           </button>
         </div>
       )}
 
-      {/* Album Grid matching yakkomajuri.com/albums */}
-      <div className="album-grid">
-        {photos.map((photo, idx) => (
-          <div
-            key={photo.id}
-            className="album"
-            onClick={() => setActivePhotoIndex(idx)}
-          >
-            <img src={photo.url} alt={photo.title} />
-            <h2 className="album-title">{photo.title}</h2>
+      {error && (
+        <p style={{ textAlign: "center", fontSize: "14px", opacity: 0.8 }}>error: {error}</p>
+      )}
 
-            {isOwner && (
-              <button
-                onClick={(e) => handleDeletePhoto(photo.id, e)}
-                style={{
-                  position: "absolute",
-                  top: "10px",
-                  right: "10px",
-                  zIndex: 3,
-                  background: "rgba(0,0,0,0.6)",
-                  border: "none",
-                  color: "#fff",
-                  padding: "4px",
-                  cursor: "pointer",
-                }}
-                title="Delete"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
+      {busy ? (
+        <p style={{ textAlign: "center", fontWeight: 100 }}>loading photos...</p>
+      ) : photos.length === 0 ? (
+        <p style={{ textAlign: "center", fontWeight: 100 }}>no photos yet.</p>
+      ) : (
+        <div className="album-grid">
+          {photos.map((photo, idx) => (
+            <div key={photo.id} className="album" onClick={() => setActive(idx)}>
+              {photo.url && <img src={photo.url} alt={photo.title} />}
+              <h2 className="album-title">{photo.title}</h2>
+              {isOwner && (
+                <button
+                  onClick={(e) => handleDelete(photo, e)}
+                  style={{
+                    position: "absolute",
+                    top: "10px",
+                    right: "10px",
+                    zIndex: 3,
+                    background: "rgba(0,0,0,0.6)",
+                    border: "none",
+                    color: "#fff",
+                    padding: "4px",
+                    cursor: "pointer",
+                  }}
+                  title="Delete"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
-      {/* Lightbox Viewer */}
-      {activePhotoIndex !== null && photos[activePhotoIndex] && (
+      {current && (
         <div
           role="dialog"
           aria-modal="true"
@@ -218,82 +238,45 @@ export default function PhotosPage() {
           }}
         >
           <button
-            onClick={() => setActivePhotoIndex(null)}
-            style={{
-              position: "absolute",
-              top: "20px",
-              right: "20px",
-              background: "none",
-              border: "none",
-              color: "white",
-              cursor: "pointer",
-            }}
+            onClick={() => setActive(null)}
+            style={{ position: "absolute", top: "20px", right: "20px", background: "none", border: "none", color: "white", cursor: "pointer" }}
             aria-label="Close"
           >
             <X className="w-6 h-6" />
           </button>
-
           {photos.length > 1 && (
             <>
               <button
-                onClick={() =>
-                  setActivePhotoIndex((activePhotoIndex - 1 + photos.length) % photos.length)
-                }
-                style={{
-                  position: "absolute",
-                  left: "20px",
-                  background: "rgba(255,255,255,0.1)",
-                  border: "none",
-                  color: "white",
-                  padding: "10px",
-                  borderRadius: "50%",
-                  cursor: "pointer",
-                }}
+                onClick={() => setActive(((active as number) - 1 + photos.length) % photos.length)}
+                style={{ position: "absolute", left: "20px", background: "rgba(255,255,255,0.1)", border: "none", color: "white", padding: "10px", borderRadius: "50%", cursor: "pointer" }}
                 aria-label="Previous"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <button
-                onClick={() =>
-                  setActivePhotoIndex((activePhotoIndex + 1) % photos.length)
-                }
-                style={{
-                  position: "absolute",
-                  right: "20px",
-                  background: "rgba(255,255,255,0.1)",
-                  border: "none",
-                  color: "white",
-                  padding: "10px",
-                  borderRadius: "50%",
-                  cursor: "pointer",
-                }}
+                onClick={() => setActive(((active as number) + 1) % photos.length)}
+                style={{ position: "absolute", right: "20px", background: "rgba(255,255,255,0.1)", border: "none", color: "white", padding: "10px", borderRadius: "50%", cursor: "pointer" }}
                 aria-label="Next"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
             </>
           )}
-
           <div style={{ textAlign: "center", maxWidth: "900px" }}>
             <img
-              src={photos[activePhotoIndex].url}
-              alt={photos[activePhotoIndex].title}
-              style={{
-                maxHeight: "75vh",
-                maxWidth: "100%",
-                margin: "auto",
-                display: "block",
-              }}
+              src={current.url}
+              alt={current.title}
+              style={{ maxHeight: "75vh", maxWidth: "100%", margin: "auto", display: "block" }}
             />
             <p style={{ color: "white", fontWeight: 200, marginTop: "15px" }}>
-              {photos[activePhotoIndex].title} — {photos[activePhotoIndex].caption || photos[activePhotoIndex].date}
+              {current.title}
+              {current.caption ? " - " + current.caption : ""}
             </p>
           </div>
         </div>
       )}
 
-      {/* Owner Upload Modal */}
-      {isUploadOpen && (
+      {open && (
         <div
           role="dialog"
           aria-modal="true"
@@ -319,56 +302,31 @@ export default function PhotosPage() {
             }}
           >
             <h3 style={{ fontWeight: 100, marginTop: 0 }}>Add Photo</h3>
-            <form onSubmit={handleAddPhoto} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <form onSubmit={handleUpload} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               <input
-                type="text"
-                placeholder="Image URL..."
+                type="file"
+                accept="image/*"
                 required
-                value={newUrl}
-                onChange={(e) => setNewUrl(e.target.value)}
-                style={{
-                  padding: "8px",
-                  background: "transparent",
-                  border: "0.5px solid var(--hr-color)",
-                  color: "inherit",
-                }}
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                style={field}
               />
-              <input
-                type="text"
-                placeholder="Title..."
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                style={{
-                  padding: "8px",
-                  background: "transparent",
-                  border: "0.5px solid var(--hr-color)",
-                  color: "inherit",
-                }}
-              />
+              <input type="text" placeholder="Title..." value={title} onChange={(e) => setTitle(e.target.value)} style={field} />
+              <input type="text" placeholder="Caption (optional)..." value={caption} onChange={(e) => setCaption(e.target.value)} style={field} />
+              <input type="text" placeholder="Album..." value={album} onChange={(e) => setAlbum(e.target.value)} style={field} />
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
                 <button
                   type="button"
-                  onClick={() => setIsUploadOpen(false)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    color: "inherit",
-                  }}
+                  onClick={() => setOpen(false)}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "inherit" }}
                 >
                   cancel
                 </button>
                 <button
                   type="submit"
-                  style={{
-                    background: "transparent",
-                    border: "0.5px solid currentColor",
-                    padding: "4px 12px",
-                    cursor: "pointer",
-                    color: "inherit",
-                  }}
+                  disabled={saving}
+                  style={{ background: "transparent", border: "0.5px solid currentColor", padding: "4px 12px", cursor: "pointer", color: "inherit" }}
                 >
-                  save
+                  {saving ? "uploading..." : "save"}
                 </button>
               </div>
             </form>
