@@ -41,6 +41,24 @@ export function ActivityTracker() {
     if (host === "localhost" || host === "127.0.0.1") return;
 
     if (pathname === last.current) return;
+
+    // Ignore the same page being reported again within 20 seconds (reloads, double fires)
+    try {
+      const prev = sessionStorage.getItem("ns_last");
+      if (prev) {
+        const cut = prev.lastIndexOf("|");
+        const prevPath = prev.slice(0, cut);
+        const prevTime = Number(prev.slice(cut + 1));
+        if (prevPath === pathname && Date.now() - prevTime < 20000) {
+          last.current = pathname;
+          return;
+        }
+      }
+      sessionStorage.setItem("ns_last", `${pathname}|${Date.now()}`);
+    } catch {
+      // storage unavailable
+    }
+
     last.current = pathname;
 
     // The first page of a browsing session records where the visitor came from

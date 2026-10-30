@@ -30,6 +30,24 @@ interface Visit {
   at: string;
 }
 
+interface Session {
+  id: string;
+  visitorId: string;
+  userId: string | null;
+  name: string;
+  email: string;
+  paths: string[];
+  views: number;
+  referrer: string | null;
+  country: string | null;
+  city: string | null;
+  device: string | null;
+  os: string | null;
+  browser: string | null;
+  start: string;
+  end: string;
+}
+
 type Range = "7d" | "30d" | "all";
 type Segment = "all" | "signed" | "anon";
 type Item = { label: string; count: number };
@@ -113,6 +131,62 @@ function prettyRef(host: string | null) {
 function cap(s: string | null) {
   if (!s) return "Unknown";
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// Groups one visitor's page views into "visits" (a new visit starts after 30 idle minutes)
+const SESSION_GAP = 30 * 60 * 1000;
+
+function buildSessions(rows: Visit[]): Session[] {
+  const byVisitor = new Map<string, Visit[]>();
+  rows.forEach((r) => {
+    const list = byVisitor.get(r.visitorId);
+    if (list) list.push(r);
+    else byVisitor.set(r.visitorId, [r]);
+  });
+
+  const out: Session[] = [];
+  byVisitor.forEach((list) => {
+    const asc = list
+      .slice()
+      .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
+    let cur: Session | null = null;
+    let lastT = 0;
+    for (let i = 0; i < asc.length; i++) {
+      const r = asc[i];
+      const t = new Date(r.at).getTime();
+      if (cur === null || t - lastT > SESSION_GAP) {
+        cur = {
+          id: r.id,
+          visitorId: r.visitorId,
+          userId: r.userId,
+          name: r.name,
+          email: r.email,
+          paths: [],
+          views: 0,
+          referrer: null,
+          country: r.country,
+          city: r.city,
+          device: r.device,
+          os: r.os,
+          browser: r.browser,
+          start: r.at,
+          end: r.at,
+        };
+        out.push(cur);
+      }
+      cur.views += 1;
+      if (!cur.paths.includes(r.path)) cur.paths.push(r.path);
+      if (!cur.userId && r.userId) {
+        cur.userId = r.userId;
+        cur.name = r.name;
+        cur.email = r.email;
+      }
+      if (r.isEntry && !cur.referrer) cur.referrer = r.referrer;
+      cur.end = r.at;
+      lastT = t;
+    }
+  });
+  return out.sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime());
 }
 
 function uniqueBy(rows: Visit[], key: (v: Visit) => string | null): Item[] {
@@ -289,10 +363,12 @@ export default function AdminDashboardPage() {
     };
   }, [segRows]);
 
+  const sessions = useMemo(() => buildSessions(inRange), [inRange]);
+
   const visitsByMember = useMemo(() => {
     const m = new Map<string, number>();
-    visits.forEach((v) => {
-      if (v.userId) m.set(v.userId, (m.get(v.userId) || 0) + 1);
+    buildSessions(visits).forEach((s) => {
+      if (s.userId) m.set(s.userId, (m.get(s.userId) || 0) + 1);
     });
     return m;
   }, [visits]);
@@ -329,7 +405,7 @@ export default function AdminDashboardPage() {
     }) as const;
 
   const rangeLabel = range === "7d" ? "last 7 days" : range === "30d" ? "last 30 days" : "all time";
-  const logRows = inRange.slice(0, 300);
+  const logRows = sessions.slice(0, 200);
 
   return (
     <div style={{ maxWidth: "900px", margin: "auto", padding: "0 20px" }}>
@@ -380,8 +456,8 @@ export default function AdminDashboardPage() {
               <span className="lbl">not signed in</span>
             </div>
             <div className="admin-stat">
-              <span className="num">{stats.views}</span>
-              <span className="lbl">page views</span>
+              <span className="num">{sessions.length}</span>
+              <span className="lbl">visits</span>
             </div>
           </div>
 
@@ -406,7 +482,7 @@ export default function AdminDashboardPage() {
                 ))}
               </div>
               <p style={{ textAlign: "center", fontSize: "13px", fontWeight: 200, opacity: 0.6, margin: 0 }}>
-                {adv.visitorTotal} visitor{adv.visitorTotal === 1 ? "" : "s"} · {rangeLabel}
+                {adv.visitorTotal} visitor{adv.visitorTotal === 1 ? "" : "s"} · {segRows.length} page views · {rangeLabel}
               </p>
               <div className="adv-grid">
                 <BarList title="Countries (visitors)" items={adv.countries} total={adv.visitorTotal} limit={8} />
@@ -425,7 +501,7 @@ export default function AdminDashboardPage() {
               members ({members.length})
             </button>
             <button onClick={() => setActiveTab("activity")} style={tabStyle(activeTab === "activity")}>
-              visit log ({inRange.length})
+              visit log ({sessions.length})
             </button>
           </div>
 
@@ -484,7 +560,7 @@ export default function AdminDashboardPage() {
                 <thead>
                   <tr>
                     <th>Who</th>
-                    <th>Page</th>
+                    <th>Pages</th>
                     <th>From</th>
                     <th>Device</th>
                     <th>When</th>
@@ -498,8 +574,16 @@ export default function AdminDashboardPage() {
                         <span className="sub">{v.userId ? v.email : "not signed in"}</span>
                       </td>
                       <td>
-                        <code>{v.path}</code>
-                        {v.isEntry && <span className="sub">via {prettyRef(v.referrer)}</span>}
+                        {v.paths.slice(0, 3).map((p) => (
+                          <code key={p} style={{ marginRight: "6px" }}>
+                            {p}
+                          </code>
+                        ))}
+                        {v.paths.length > 3 && <span className="sub">+{v.paths.length - 3} more pages</span>}
+                        <span className="sub">
+                          {v.views} page view{v.views === 1 ? "" : "s"}
+                          {v.referrer ? ` · via ${prettyRef(v.referrer)}` : ""}
+                        </span>
                       </td>
                       <td>
                         {countryName(v.country)}
@@ -512,8 +596,8 @@ export default function AdminDashboardPage() {
                         </span>
                       </td>
                       <td>
-                        {fmt(v.at)}
-                        <span className="sub">{ago(v.at)}</span>
+                        {fmt(v.start)}
+                        <span className="sub">{ago(v.start)}</span>
                       </td>
                     </tr>
                   ))}
