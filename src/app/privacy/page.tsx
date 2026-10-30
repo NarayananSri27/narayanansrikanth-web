@@ -18,7 +18,7 @@ export default function PrivacyPage() {
 
       <h2 style={h2Style}>What is collected</h2>
       <p style={pStyle}>
-        When you sign in with Google, I receive your name, email address, and profile picture from your Google account. I never receive your Google password. If you choose to add an Instagram username, I store that as well. While you are signed in, I record which pages of this site you visit and when.
+        When you sign in with Google, I receive your name, email address, and profile picture from your Google account. I never receive your Google password. If you choose to add an Instagram username, I store that as well. I also record which pages of this site are visited and when, along with the country, device type, and browser of the visitor and the website they came from. This applies to signed-in members and to visitors who are not signed in. A random ID stored in your browser is used instead of your name or IP address.
       </p>
 
       <h2 style={h2Style}>How it is used</h2>
@@ -49,3 +49,4 @@ export default function PrivacyPage() {
     </div>
   );
 }
+

@@ -3,32 +3,69 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "./AuthProvider";
-import { createClient } from "@/lib/supabase/client";
+
+function getVisitorId(): string {
+  try {
+    let id = localStorage.getItem("ns_vid");
+    if (!id) {
+      id =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem("ns_vid", id);
+    }
+    return id;
+  } catch {
+    return "unknown";
+  }
+}
 
 export function ActivityTracker() {
   const pathname = usePathname();
-  const { user } = useAuth();
-  const lastTrackedPath = useRef<string | null>(null);
+  const { isOwner, isLoading } = useAuth();
+  const last = useRef<string | null>(null);
 
   useEffect(() => {
-    // Only track signed-in members, once per page
-    if (!user || pathname === lastTrackedPath.current) return;
-    const supabase = createClient();
-    if (!supabase) return;
+    if (isLoading) return;
 
-    const path = pathname;
-    // Short delay so the member row exists before the first visit is logged
-    const timer = setTimeout(async () => {
-      lastTrackedPath.current = path;
-      await supabase.from("visitor_activity").insert({
-        user_id: user.id,
-        page_path: path,
-        event_type: "page_visit",
-      });
-    }, 1500);
+    // The owner is never counted. Once you sign in on a browser, it is ignored from then on.
+    try {
+      if (isOwner) localStorage.setItem("ns_ignore", "1");
+      if (localStorage.getItem("ns_ignore")) return;
+    } catch {
+      // storage unavailable
+    }
 
-    return () => clearTimeout(timer);
-  }, [pathname, user]);
+    // Do not count local testing
+    const host = window.location.hostname;
+    if (host === "localhost" || host === "127.0.0.1") return;
+
+    if (pathname === last.current) return;
+    last.current = pathname;
+
+    // The first page of a browsing session records where the visitor came from
+    let entry = false;
+    try {
+      if (!sessionStorage.getItem("ns_sess")) {
+        sessionStorage.setItem("ns_sess", "1");
+        entry = true;
+      }
+    } catch {
+      // storage unavailable
+    }
+
+    fetch("/api/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        path: pathname,
+        referrer: entry ? document.referrer : "",
+        entry,
+        visitorId: getVisitorId(),
+      }),
+      keepalive: true,
+    }).catch(() => {});
+  }, [pathname, isLoading, isOwner]);
 
   return null;
 }

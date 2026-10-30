@@ -1,18 +1,21 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 import { AtSign, X } from "lucide-react";
 
 export function InstagramModal() {
   const { user, profile, updateInstagram } = useAuth();
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [username, setUsername] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // Show only if authenticated and neither saved nor previously dismissed
+    // Only on the pics page, for signed-in members who have not answered yet
     if (
+      pathname === "/photos" &&
       user &&
       profile &&
       !profile.instagram_popup_dismissed &&
@@ -22,19 +25,7 @@ export function InstagramModal() {
     } else {
       setIsOpen(false);
     }
-  }, [user, profile]);
-
-  if (!isOpen) return null;
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    // Clean and normalize username (strip leading @ and spaces)
-    const cleaned = username.replace(/^@+/, "").trim();
-    await updateInstagram(cleaned.length > 0 ? cleaned : null, true);
-    setIsSubmitting(false);
-    setIsOpen(false);
-  };
+  }, [pathname, user, profile]);
 
   const handleSkip = async () => {
     setIsSubmitting(true);
@@ -43,42 +34,49 @@ export function InstagramModal() {
     setIsOpen(false);
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleSkip();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    // Clean the username (strip leading @ and spaces)
+    const cleaned = username.replace(/^@+/, "").trim();
+    await updateInstagram(cleaned.length > 0 ? cleaned : null, true);
+    setIsSubmitting(false);
+    setIsOpen(false);
+  };
+
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="instagram-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in"
-    >
-      <div className="relative w-full max-w-md p-6 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-2xl">
-        <button
-          onClick={handleSkip}
-          className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors"
-          aria-label="Close dialog"
-        >
+    <div className="auth-backdrop" style={{ zIndex: 150 }}>
+      <div className="auth-card" role="dialog" aria-modal="true" aria-label="Instagram">
+        <button className="auth-close" onClick={handleSkip} aria-label="Close">
           <X className="w-4 h-4" />
         </button>
 
-        <div className="mb-4">
-          <p className="text-xs uppercase tracking-widest text-neutral-500 font-mono mb-1">
-            A little introduction
-          </p>
-          <h2
-            id="instagram-modal-title"
-            className="text-lg font-semibold text-neutral-900 dark:text-neutral-100"
-          >
-            What&apos;s your Instagram?
-          </h2>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-            It&apos;s completely optional — it just helps me put a face to the name when friends or McGill peers visit.
-          </p>
-        </div>
+        <h2>What&apos;s your Instagram?</h2>
 
-        <form onSubmit={handleSave} className="space-y-4">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-neutral-400">
-              <AtSign className="w-4 h-4" />
-            </div>
+        <form onSubmit={handleSave} style={{ marginTop: "22px" }}>
+          <div style={{ position: "relative" }}>
+            <AtSign
+              className="w-4 h-4"
+              style={{
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                opacity: 0.5,
+              }}
+            />
             <input
               type="text"
               value={username}
@@ -86,25 +84,50 @@ export function InstagramModal() {
               placeholder="username"
               maxLength={30}
               autoFocus
-              className="w-full pl-9 pr-3 py-2 text-sm bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-300 dark:border-neutral-700 rounded-lg text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-100"
+              style={{
+                width: "100%",
+                padding: "11px 12px 11px 36px",
+                fontSize: "15px",
+                fontFamily: "inherit",
+                color: "inherit",
+                background: "transparent",
+                border: "0.5px solid var(--hr-color)",
+                borderRadius: "10px",
+                outline: "none",
+              }}
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-2">
+          <div style={{ display: "flex", justifyContent: "center", gap: "14px", marginTop: "20px" }}>
             <button
               type="button"
               onClick={handleSkip}
               disabled={isSubmitting}
-              className="px-3.5 py-2 text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors"
+              style={{
+                background: "none",
+                border: "none",
+                color: "inherit",
+                opacity: 0.6,
+                fontSize: "14px",
+                cursor: "pointer",
+              }}
             >
-              Skip for now
+              skip
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200 rounded-lg transition-colors shadow-sm disabled:opacity-50"
+              style={{
+                background: "transparent",
+                color: "inherit",
+                border: "0.5px solid currentColor",
+                borderRadius: "999px",
+                padding: "6px 22px",
+                fontSize: "14px",
+                cursor: "pointer",
+              }}
             >
-              {isSubmitting ? "Saving..." : "Save"}
+              {isSubmitting ? "saving..." : "save"}
             </button>
           </div>
         </form>
