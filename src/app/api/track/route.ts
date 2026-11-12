@@ -101,7 +101,15 @@ export async function POST(request: Request) {
     }
   }
 
-  await supabase.from("site_visits").insert({
+  // Approximate city-level coordinates from Vercel, rounded to ~1 km for the admin globe
+  const coord = (name: string, max: number) => {
+    const n = parseFloat(request.headers.get(name) || "");
+    return Number.isFinite(n) && Math.abs(n) <= max ? Math.round(n * 100) / 100 : null;
+  };
+  const latitude = coord("x-vercel-ip-latitude", 90);
+  const longitude = coord("x-vercel-ip-longitude", 180);
+
+  const row = {
     visitor_id: visitorId,
     user_id: user?.id ?? null,
     page_path: path,
@@ -112,7 +120,13 @@ export async function POST(request: Request) {
     device,
     os,
     browser,
-  });
+  };
+
+  const { error } = await supabase.from("site_visits").insert({ ...row, latitude, longitude });
+  if (error && /latitude|longitude/i.test(error.message)) {
+    // Location columns not added yet — still record the visit
+    await supabase.from("site_visits").insert(row);
+  }
 
   return new NextResponse(null, { status: 204 });
 }

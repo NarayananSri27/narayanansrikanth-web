@@ -1,8 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { useAuth } from "@/components/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
+
+// Loaded only when the map is opened, so the rest of the dashboard stays fast
+const VisitorGlobe = dynamic(() => import("@/components/VisitorGlobe"), {
+  ssr: false,
+  loading: () => (
+    <p style={{ textAlign: "center", fontSize: "13px", fontWeight: 200, opacity: 0.6 }}>loading map...</p>
+  ),
+});
 
 interface Member {
   id: string;
@@ -257,6 +266,8 @@ export default function AdminDashboardPage() {
   const [visits, setVisits] = useState<Visit[]>([]);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
+  const [showMap, setShowMap] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const load = useCallback(async () => {
     const supabase = createClient();
@@ -265,6 +276,7 @@ export default function AdminDashboardPage() {
       return;
     }
     setBusy(true);
+    setReloadKey((k) => k + 1);
     setError("");
     const [m, v] = await Promise.all([
       supabase.from("members").select("*").order("last_sign_in_at", { ascending: false }),
@@ -317,12 +329,18 @@ export default function AdminDashboardPage() {
     if (isOwner) load();
   }, [isOwner, load]);
 
-  const inRange = useMemo(() => {
-    if (range === "all") return visits;
+  const since = useMemo(() => {
+    if (range === "all") return null;
     const ms = (range === "7d" ? 7 : 30) * 24 * 60 * 60 * 1000;
-    const cutoff = Date.now() - ms;
+    return new Date(Date.now() - ms).toISOString();
+    // reloadKey: move the cutoff forward on refresh
+  }, [range, reloadKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const inRange = useMemo(() => {
+    if (!since) return visits;
+    const cutoff = new Date(since).getTime();
     return visits.filter((v) => new Date(v.at).getTime() >= cutoff);
-  }, [visits, range]);
+  }, [visits, since]);
 
   const stats = useMemo(() => {
     const all = new Set<string>();
@@ -459,6 +477,17 @@ export default function AdminDashboardPage() {
               <span className="num">{sessions.length}</span>
               <span className="lbl">visits</span>
             </div>
+          </div>
+
+          <div style={{ textAlign: "center", margin: "0 0 30px" }}>
+            <button className={`adm-pill ${showMap ? "on" : ""}`} onClick={() => setShowMap((s) => !s)}>
+              {showMap ? "hide visitor map" : "show visitor map"}
+            </button>
+            {showMap && (
+              <div style={{ marginTop: "18px", animation: "admDrop 0.3s ease" }}>
+                <VisitorGlobe since={since} reloadKey={reloadKey} />
+              </div>
+            )}
           </div>
 
           <details className="adv">
